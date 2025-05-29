@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/Esencia_app/static/css/main.92f681c5.css",
+    "main.js": "/Esencia_app/static/js/main.a2cfc221.js",
+    "index.html": "/Esencia_app/index.html",
+    "main.92f681c5.css.map": "/Esencia_app/static/css/main.92f681c5.css.map",
+    "main.a2cfc221.js.map": "/Esencia_app/static/js/main.a2cfc221.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.92f681c5.css",
+    "static/js/main.a2cfc221.js"
+  ]
+}
