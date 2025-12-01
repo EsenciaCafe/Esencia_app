@@ -205,6 +205,22 @@
       font-weight: 500;
     }
 
+    .badge-pending {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.1rem 0.6rem;
+      border-radius: 999px;
+      background: #fee2e2;
+      color: #b91c1c;
+      font-size: 0.72rem;
+      font-weight: 500;
+    }
+
+    .row-pending {
+      background: #fff7ed !important;
+    }
+
     .generated-card {
       margin-top: 1rem;
       background: #ffffff;
@@ -316,6 +332,12 @@
           <span class="pill" id="pill-summary">0 productos</span>
         </div>
         <div class="toolbar-right">
+          <button class="btn-ghost" id="btn-export" title="Exportar configuración">
+            💾 Guardar config
+          </button>
+          <button class="btn-ghost" id="btn-import" title="Importar configuración">
+            📂 Cargar config
+          </button>
           <button class="btn-ghost" id="btn-reset">
             🗑 Limpiar todo
           </button>
@@ -395,6 +417,8 @@
     const STORAGE_KEY = "esencia-pedido-productos-v1";
 
     let products = [];
+    // ids de productos cuyo stock actual ya se ha tocado en ESTA sesión
+    let sessionTouchedIds = new Set();
 
     // --- Utilidades almacenamiento ---
     function loadProducts() {
@@ -415,6 +439,8 @@
         console.error("Error cargando datos:", e);
         products = DEFAULT_PRODUCTS;
       }
+      // cada vez que entras, marcas todo como pendiente de revisar
+      sessionTouchedIds = new Set();
     }
 
     function saveProducts() {
@@ -424,6 +450,49 @@
         console.error("Error guardando datos:", e);
       }
       updateSummaryPill();
+    }
+
+    // --- Exportar / importar configuración para pasarla a otro dispositivo ---
+    async function exportConfig() {
+      const data = JSON.stringify(products, null, 2);
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(data);
+          alert(
+            "Configuración copiada al portapapeles.\n\nPégala en una nota o en el otro dispositivo para importarla allí."
+          );
+        } else {
+          alert(
+            "No se pudo copiar automáticamente. Te mostraré la configuración para que la copies manualmente:\n\n" +
+              data
+          );
+        }
+      } catch (e) {
+        console.error("Error exportando:", e);
+        alert("Hubo un problema al exportar. Intenta copiar manualmente desde el inspector.");
+      }
+    }
+
+    function importConfig() {
+      const raw = prompt(
+        "Pega aquí la configuración que exportaste (JSON):"
+      );
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+          alert("El formato no es válido (se esperaba una lista de productos).");
+          return;
+        }
+        products = parsed;
+        sessionTouchedIds = new Set();
+        saveProducts();
+        renderTable();
+        alert("Configuración importada correctamente ✅");
+      } catch (e) {
+        console.error("Error importando:", e);
+        alert("No se pudo interpretar el JSON. Revisa que lo hayas pegado completo.");
+      }
     }
 
     // --- Render tabla ---
@@ -483,8 +552,10 @@
         inputStockActual.value = prod.stockActual ?? 0;
         inputStockActual.addEventListener("input", () => {
           prod.stockActual = parseFloat(inputStockActual.value || "0");
+          sessionTouchedIds.add(prod.id); // marcado como revisado en esta sesión
           updateRowStatus(tr, prod);
           saveProducts();
+          updateSummaryPill();
         });
         tdStockActual.appendChild(inputStockActual);
         tr.appendChild(tdStockActual);
@@ -521,7 +592,7 @@
 
         tbody.appendChild(tr);
 
-        // Estado inicial
+        // Estado inicial (pendiente de revisar hasta que se toque el stock)
         updateRowStatus(tr, prod);
       });
 
@@ -536,8 +607,23 @@
       const estadoTd = tr.children[5];
       estadoTd.innerHTML = "";
 
+      // clase de fila para "pendiente"
+      if (!sessionTouchedIds.has(prod.id)) {
+        tr.classList.add("row-pending");
+      } else {
+        tr.classList.remove("row-pending");
+      }
+
       if (!prod.nombre) {
-        estadoTd.textContent = "";
+        return;
+      }
+
+      // Si aún no se ha revisado en esta sesión: mostrar badge de pendiente
+      if (!sessionTouchedIds.has(prod.id)) {
+        const span = document.createElement("span");
+        span.className = "badge-pending";
+        span.textContent = "Pendiente revisar";
+        estadoTd.appendChild(span);
         return;
       }
 
@@ -570,7 +656,19 @@
     function updateSummaryPill() {
       const pill = document.getElementById("pill-summary");
       const count = products.length;
-      pill.textContent = count === 1 ? "1 producto" : `${count} productos`;
+
+      // cuántos pendientes (no tocados en esta sesión)
+      const pendientes = products.filter((p) => !sessionTouchedIds.has(p.id)).length;
+
+      let texto = count === 1 ? "1 producto" : `${count} productos`;
+      if (count > 0) {
+        if (pendientes > 0) {
+          texto += ` · ${pendientes} pendiente${pendientes === 1 ? "" : "s"}`;
+        } else {
+          texto += " · todo revisado";
+        }
+      }
+      pill.textContent = texto;
     }
 
     // --- Lógica generar texto de pedido ---
@@ -659,6 +757,7 @@
       if (!confirmReset) return;
 
       products = [];
+      sessionTouchedIds = new Set();
       saveProducts();
       renderTable();
       document.getElementById("pedido-texto").value = "";
@@ -675,6 +774,8 @@
       document.getElementById("btn-copy").addEventListener("click", copiarTexto);
       document.getElementById("btn-add").addEventListener("click", addProduct);
       document.getElementById("btn-reset").addEventListener("click", resetAll);
+      document.getElementById("btn-export").addEventListener("click", exportConfig);
+      document.getElementById("btn-import").addEventListener("click", importConfig);
     });
   </script>
 </body>
