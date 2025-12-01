@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pedido Esencia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    .app {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 2.5rem;
+    }
+
+    header {
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin-top: 0.35rem;
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 1rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+      border: 1px solid #ececec;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+      transition: transform 0.05s ease, box-shadow 0.05s ease, background 0.1s ease;
+    }
+
+    button:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+
+    .btn-primary {
+      background: #111827;
+      color: #ffffff;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+    }
+
+    .btn-primary:hover {
+      background: #000000;
+    }
+
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .btn-danger {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #6b7280;
+      padding-inline: 0.4rem;
+      box-shadow: none;
+    }
+
+    .pill {
+      background: #f9fafb;
+      border-radius: 999px;
+      padding: 0.15rem 0.7rem;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    thead {
+      background: #f9fafb;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    th,
+    td {
+      padding: 0.4rem 0.35rem;
+      border-bottom: 1px solid #f1f1f1;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    tbody tr:hover {
+      background: #f9fafb;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.8rem;
+      outline: none;
+      background: #ffffff;
+    }
+
+    input[type="number"] {
+      max-width: 80px;
+    }
+
+    input:focus {
+      border-color: #111827;
+    }
+
+    .table-wrapper {
+      max-height: 340px;
+      overflow: auto;
+      border-radius: 12px;
+      border: 1px solid #f1f1f1;
+      background: #ffffff;
+    }
+
+    .badge-low {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.1rem 0.6rem;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 0.72rem;
+      font-weight: 500;
+    }
+
+    .badge-ok {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.1rem 0.6rem;
+      border-radius: 999px;
+      background: #ecfdf5;
+      color: #166534;
+      font-size: 0.72rem;
+      font-weight: 500;
+    }
+
+    .generated-card {
+      margin-top: 1rem;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 0.9rem;
+      border: 1px solid #ececec;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.02);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      padding: 0.6rem 0.7rem;
+      font-size: 0.85rem;
+      resize: vertical;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: #111827;
+    }
+
+    .generated-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .generated-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-bottom: 0.4rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22c55e;
+    }
+
+    .status-dot.empty {
+      background: #f97316;
+    }
+
+    .empty-message {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      text-align: center;
+      padding: 0.8rem 0.4rem;
+    }
+
+    @media (max-width: 640px) {
+      .app {
+        padding-inline: 0.8rem;
+      }
+
+      h1 {
+        font-size: 1.3rem;
+      }
+
+      .toolbar {
+        align-items: flex-start;
+      }
+
+      th:nth-child(1),
+      td:nth-child(1) {
+        display: none; /* ocultar categoría en móviles para simplificar */
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Pedido Esencia</h1>
+      <p class="subtitle">
+        Ajusta el stock actual, pulsa <strong>“Calcular pedido”</strong> y copia el texto para tu jefe de compras.
+      </p>
+    </header>
+
+    <div class="card">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button class="btn-primary" id="btn-calcular">
+            🧮 Calcular pedido
+          </button>
+          <button class="btn-secondary" id="btn-add">
+            ➕ Añadir producto
+          </button>
+          <span class="pill" id="pill-summary">0 productos</span>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn-ghost" id="btn-reset">
+            🗑 Limpiar todo
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Categoría</th>
+              <th>Producto</th>
+              <th>Unidad</th>
+              <th>Stock actual</th>
+              <th>Stock máximo</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="product-body">
+            <!-- filas generadas por JS -->
+          </tbody>
+        </table>
+      </div>
+      <div id="empty-message" class="empty-message" style="display:none;">
+        No hay productos aún. Pulsa <strong>“Añadir producto”</strong> para empezar.
+      </div>
+    </div>
+
+    <div class="generated-card">
+      <div class="generated-header">
+        <div>
+          <div class="generated-title">Texto de pedido para enviar</div>
+          <div class="hint">Puedes editarlo y luego copiarlo a WhatsApp, Telegram, email, etc.</div>
+        </div>
+        <button class="btn-secondary" id="btn-copy">
+          📋 Copiar texto
+        </button>
+      </div>
+      <textarea id="pedido-texto" placeholder="Pulsa “Calcular pedido” para generar el texto."></textarea>
+      <div class="status-row" id="status-row">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">Sin calcular todavía.</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Datos iniciales (puedes cambiarlos o borrarlos si quieres empezar vacío) ---
+    const DEFAULT_PRODUCTS = [
+      {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "-1",
+        categoria: "Lácteos",
+        nombre: "Leche entera",
+        unidad: "caja 12 u",
+        stockActual: 1,
+        stockMax: 3
+      },
+      {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "-2",
+        categoria: "Café",
+        nombre: "Café espresso 1 kg",
+        unidad: "bolsa 1 kg",
+        stockActual: 0,
+        stockMax: 2
+      },
+      {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "-3",
+        categoria: "Secos",
+        nombre: "Harina 000",
+        unidad: "saco 25 kg",
+        stockActual: 1,
+        stockMax: 2
+      }
+    ];
+
+    const STORAGE_KEY = "esencia-pedido-productos-v1";
+
+    let products = [];
+
+    // --- Utilidades almacenamiento ---
+    function loadProducts() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          products = DEFAULT_PRODUCTS;
+          saveProducts();
+        } else {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            products = parsed;
+          } else {
+            products = DEFAULT_PRODUCTS;
+          }
+        }
+      } catch (e) {
+        console.error("Error cargando datos:", e);
+        products = DEFAULT_PRODUCTS;
+      }
+    }
+
+    function saveProducts() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+      } catch (e) {
+        console.error("Error guardando datos:", e);
+      }
+      updateSummaryPill();
+    }
+
+    // --- Render tabla ---
+    function renderTable() {
+      const tbody = document.getElementById("product-body");
+      tbody.innerHTML = "";
+
+      if (products.length === 0) {
+        document.getElementById("empty-message").style.display = "block";
+      } else {
+        document.getElementById("empty-message").style.display = "none";
+      }
+
+      products.forEach((prod) => {
+        const tr = document.createElement("tr");
+
+        const tdCategoria = document.createElement("td");
+        const inputCat = document.createElement("input");
+        inputCat.type = "text";
+        inputCat.value = prod.categoria || "";
+        inputCat.placeholder = "Ej: Lácteos";
+        inputCat.addEventListener("input", () => {
+          prod.categoria = inputCat.value;
+          saveProducts();
+        });
+        tdCategoria.appendChild(inputCat);
+        tr.appendChild(tdCategoria);
+
+        const tdNombre = document.createElement("td");
+        const inputNombre = document.createElement("input");
+        inputNombre.type = "text";
+        inputNombre.value = prod.nombre || "";
+        inputNombre.placeholder = "Ej: Leche entera";
+        inputNombre.addEventListener("input", () => {
+          prod.nombre = inputNombre.value;
+          saveProducts();
+        });
+        tdNombre.appendChild(inputNombre);
+        tr.appendChild(tdNombre);
+
+        const tdUnidad = document.createElement("td");
+        const inputUnidad = document.createElement("input");
+        inputUnidad.type = "text";
+        inputUnidad.value = prod.unidad || "";
+        inputUnidad.placeholder = "Ej: caja 12 u";
+        inputUnidad.addEventListener("input", () => {
+          prod.unidad = inputUnidad.value;
+          saveProducts();
+        });
+        tdUnidad.appendChild(inputUnidad);
+        tr.appendChild(tdUnidad);
+
+        const tdStockActual = document.createElement("td");
+        const inputStockActual = document.createElement("input");
+        inputStockActual.type = "number";
+        inputStockActual.min = "0";
+        inputStockActual.value = prod.stockActual ?? 0;
+        inputStockActual.addEventListener("input", () => {
+          prod.stockActual = parseFloat(inputStockActual.value || "0");
+          updateRowStatus(tr, prod);
+          saveProducts();
+        });
+        tdStockActual.appendChild(inputStockActual);
+        tr.appendChild(tdStockActual);
+
+        const tdStockMax = document.createElement("td");
+        const inputStockMax = document.createElement("input");
+        inputStockMax.type = "number";
+        inputStockMax.min = "0";
+        inputStockMax.value = prod.stockMax ?? 0;
+        inputStockMax.addEventListener("input", () => {
+          prod.stockMax = parseFloat(inputStockMax.value || "0");
+          updateRowStatus(tr, prod);
+          saveProducts();
+        });
+        tdStockMax.appendChild(inputStockMax);
+        tr.appendChild(tdStockMax);
+
+        const tdEstado = document.createElement("td");
+        tdEstado.style.minWidth = "110px";
+        tr.appendChild(tdEstado);
+
+        const tdAcciones = document.createElement("td");
+        const btnDel = document.createElement("button");
+        btnDel.className = "btn-ghost";
+        btnDel.textContent = "✖";
+        btnDel.title = "Eliminar producto";
+        btnDel.addEventListener("click", () => {
+          products = products.filter((p) => p.id !== prod.id);
+          saveProducts();
+          renderTable();
+        });
+        tdAcciones.appendChild(btnDel);
+        tr.appendChild(tdAcciones);
+
+        tbody.appendChild(tr);
+
+        // Estado inicial
+        updateRowStatus(tr, prod);
+      });
+
+      updateSummaryPill();
+    }
+
+    function updateRowStatus(tr, prod) {
+      const stockActual = Number(prod.stockActual || 0);
+      const stockMax = Number(prod.stockMax || 0);
+      const diff = stockMax - stockActual;
+
+      const estadoTd = tr.children[5];
+      estadoTd.innerHTML = "";
+
+      if (!prod.nombre) {
+        estadoTd.textContent = "";
+        return;
+      }
+
+      if (stockMax <= 0) {
+        const span = document.createElement("span");
+        span.className = "badge-low";
+        span.textContent = "Sin stock máximo";
+        estadoTd.appendChild(span);
+        return;
+      }
+
+      if (diff <= 0) {
+        const span = document.createElement("span");
+        span.className = "badge-ok";
+        span.textContent = "OK";
+        estadoTd.appendChild(span);
+      } else if (diff > 0 && diff <= stockMax * 0.4) {
+        const span = document.createElement("span");
+        span.className = "badge-low";
+        span.textContent = "Bajando";
+        estadoTd.appendChild(span);
+      } else {
+        const span = document.createElement("span");
+        span.className = "badge-low";
+        span.textContent = "Pedir";
+        estadoTd.appendChild(span);
+      }
+    }
+
+    function updateSummaryPill() {
+      const pill = document.getElementById("pill-summary");
+      const count = products.length;
+      pill.textContent = count === 1 ? "1 producto" : `${count} productos`;
+    }
+
+    // --- Lógica generar texto de pedido ---
+    function calcularPedidoTexto() {
+      const lineas = [];
+      let totalLineas = 0;
+
+      products.forEach((prod) => {
+        if (!prod.nombre) return;
+
+        const stockActual = Number(prod.stockActual || 0);
+        const stockMax = Number(prod.stockMax || 0);
+        if (stockMax <= 0) return;
+
+        const cantComprar = Math.max(0, stockMax - stockActual);
+        if (cantComprar <= 0) return;
+
+        totalLineas++;
+
+        let linea = `- ${prod.nombre} – ${cantComprar} ${prod.unidad || ""}`.trim();
+        if (prod.categoria) {
+          linea += ` (${prod.categoria})`;
+        }
+        lineas.push(linea);
+      });
+
+      const textarea = document.getElementById("pedido-texto");
+      const statusDot = document.getElementById("status-dot");
+      const statusText = document.getElementById("status-text");
+
+      if (lineas.length === 0) {
+        textarea.value = "Con el stock actual no hace falta comprar nada 🙌";
+        statusDot.classList.add("empty");
+        statusText.textContent = "Sin productos para pedir.";
+        return;
+      }
+
+      const textoFinal =
+        "Hola, te paso el pedido de Esencia:\n\n" +
+        lineas.join("\n") +
+        "\n\nRevísalo y si ves algo raro me dices.";
+
+      textarea.value = textoFinal;
+      statusDot.classList.remove("empty");
+      statusText.textContent = `Pedido calculado: ${totalLineas} líneas.`;
+    }
+
+    async function copiarTexto() {
+      const textarea = document.getElementById("pedido-texto");
+      const texto = textarea.value.trim();
+      if (!texto) return;
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(texto);
+          alert("Texto copiado al portapapeles ✅");
+        } else {
+          textarea.select();
+          document.execCommand("copy");
+          alert("Texto copiado al portapapeles ✅");
+        }
+      } catch (e) {
+        console.error("Error copiando:", e);
+        alert("No se pudo copiar automáticamente. Copia el texto manualmente.");
+      }
+    }
+
+    function addProduct() {
+      const nuevo = {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random(),
+        categoria: "",
+        nombre: "",
+        unidad: "",
+        stockActual: 0,
+        stockMax: 0
+      };
+      products.push(nuevo);
+      saveProducts();
+      renderTable();
+    }
+
+    function resetAll() {
+      const confirmReset = confirm(
+        "Esto borrará todos los productos guardados en este navegador.\n\n¿Seguro que quieres limpiar todo?"
+      );
+      if (!confirmReset) return;
+
+      products = [];
+      saveProducts();
+      renderTable();
+      document.getElementById("pedido-texto").value = "";
+      document.getElementById("status-dot").classList.add("empty");
+      document.getElementById("status-text").textContent = "Datos reiniciados.";
+    }
+
+    // --- Inicio ---
+    document.addEventListener("DOMContentLoaded", () => {
+      loadProducts();
+      renderTable();
+
+      document.getElementById("btn-calcular").addEventListener("click", calcularPedidoTexto);
+      document.getElementById("btn-copy").addEventListener("click", copiarTexto);
+      document.getElementById("btn-add").addEventListener("click", addProduct);
+      document.getElementById("btn-reset").addEventListener("click", resetAll);
+    });
+  </script>
+</body>
+</html>
