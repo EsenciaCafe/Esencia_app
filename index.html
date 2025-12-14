@@ -16,7 +16,7 @@
     .app{
       max-width: 860px;
       margin: 0 auto;
-      padding: 0.9rem 0.8rem 6.4rem; /* espacio para barra inferior */
+      padding: 0.9rem 0.8rem 6.4rem;
     }
 
     header{
@@ -45,13 +45,13 @@
       white-space:nowrap;
       transition: transform .05s ease, background .1s ease;
       user-select:none;
+      -webkit-tap-highlight-color: transparent;
     }
     button:active{ transform: translateY(1px); }
 
     .btn-primary{ background:#111827; color:#fff; }
     .btn-secondary{ background:#e5e7eb; color:#111827; }
     .btn-ghost{ background:transparent; color:#6b7280; padding-inline:0.45rem; }
-    .btn-danger{ background:#fee2e2; color:#b91c1c; }
 
     .card{
       background:#fff;
@@ -102,6 +102,7 @@
       font-size:0.78rem;
       cursor:pointer;
       user-select:none;
+      -webkit-tap-highlight-color: transparent;
     }
     .chip.active{
       border-color:#111827;
@@ -138,6 +139,7 @@
       flex-direction:column;
       gap:0.6rem;
       padding-right: 2px;
+      position: relative;
     }
 
     .empty{
@@ -158,6 +160,24 @@
       border-color:#fed7aa;
     }
 
+    /* Drag UI */
+    .item.dragging{
+      opacity: 0.98;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.18);
+      transform: scale(1.01);
+      border-color: #d1d5db;
+    }
+    .placeholder{
+      border: 2px dashed #d1d5db;
+      border-radius: 16px;
+      background: #f9fafb;
+    }
+    body.drag-mode{
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: grabbing;
+    }
+
     .row1{
       display:flex;
       gap:0.6rem;
@@ -168,7 +188,7 @@
 
     .name-wrap{
       flex:1;
-      min-width:0; /* 🔥 evita colapsos raros */
+      min-width:0;
     }
 
     .name{
@@ -182,10 +202,9 @@
       line-height:1.2;
       outline:none;
       resize:none;
-      overflow:hidden; /* sin scroll interno */
+      overflow:hidden;
       background:#fff;
 
-      /* 🔥 para que NUNCA quede letra-por-letra */
       white-space: pre-wrap;
       word-break: break-word;
       overflow-wrap: anywhere;
@@ -282,14 +301,26 @@
       justify-content:flex-end;
       flex:0 0 auto;
     }
+
     .icon{
       border-radius:12px;
-      padding:0.35rem 0.5rem;
-      font-size:0.9rem;
+      padding:0.35rem 0.55rem;
+      font-size:0.95rem;
       background:#f3f4f6;
       color:#111827;
     }
-    .icon:disabled{ opacity:0.4; cursor:not-allowed; }
+
+    /* Handle (drag) */
+    .handle{
+      border-radius:12px;
+      padding:0.35rem 0.6rem;
+      font-size:1rem;
+      background:#eef2ff;
+      color:#111827;
+      cursor: grab;
+      touch-action: none; /* IMPORTANT: para arrastrar sin scroll */
+    }
+    .handle:active{ cursor: grabbing; transform: translateY(1px); }
 
     /* Barra inferior fija */
     .bottom-bar{
@@ -360,26 +391,22 @@
       flex-wrap:wrap;
     }
 
-    /* ✅ FIX MÓVIL: layout vertical para evitar “nombre en columna” */
+    /* Móvil: layout vertical */
     @media (max-width: 640px){
       .app{ padding: 0.9rem 0.7rem 6.4rem; }
-      header{ align-items:flex-start; }
       .sub{ display:none; }
 
       .row1{
-        flex-direction: column;     /* 🔥 CLAVE */
+        flex-direction: column;
         align-items: stretch;
       }
       .right{
         width: 100%;
-        min-width: 0;               /* 🔥 CLAVE */
+        min-width: 0;
         align-items: stretch;
       }
       .nums{
         grid-template-columns: 1fr 1fr;
-      }
-      .statusline{
-        flex-direction: row;
       }
     }
 
@@ -465,7 +492,7 @@
   </div>
 
   <script>
-    const STORAGE_KEY = "esencia-pedido-mobile-v2";
+    const STORAGE_KEY = "esencia-pedido-mobile-dnd-v1";
 
     const DEFAULT_PRODUCTS = [
       { id: crypto.randomUUID?.() ?? String(Date.now())+"-1", nombre: "Sirope Monin Pistacho", unidad: "botella", stockActual: 0, stockMax: 1 },
@@ -477,6 +504,10 @@
     let sessionTouched = new Set();
     let currentFilter = "all";
     let searchQuery = "";
+
+    // Enter: saltar al siguiente "Actual"
+    let pendingFocusId = null;
+    let lastVisible = [];
 
     function load(){
       try{
@@ -491,7 +522,7 @@
       }catch{
         products = DEFAULT_PRODUCTS;
       }
-      sessionTouched = new Set(); // al abrir: todo pendiente
+      sessionTouched = new Set();
     }
 
     function save(){
@@ -512,7 +543,7 @@
 
     function needsBuy(p){
       const max = clampNum(p.stockMax);
-      const cur = clampNum(p.stockActual);
+      const cur = (p.stockActual === "" ? 0 : clampNum(p.stockActual));
       if(max <= 0) return false;
       return (max - cur) > 0;
     }
@@ -537,13 +568,137 @@
     const listEl = document.getElementById("list");
     const emptyEl = document.getElementById("empty");
 
+    // ===== Drag & Drop (pointer-based, mobile friendly) =====
+    let drag = {
+      active: false,
+      id: null,
+      el: null,
+      placeholder: null,
+      offsetY: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0
+    };
+
+    function startDrag(cardEl, id, clientX, clientY){
+      drag.active = true;
+      drag.id = id;
+      drag.el = cardEl;
+
+      const rect = cardEl.getBoundingClientRect();
+      drag.offsetY = clientY - rect.top;
+      drag.width = rect.width;
+      drag.height = rect.height;
+
+      // placeholder
+      const ph = document.createElement("div");
+      ph.className = "placeholder";
+      ph.style.height = rect.height + "px";
+      drag.placeholder = ph;
+      cardEl.parentNode.insertBefore(ph, cardEl.nextSibling);
+
+      // move dragged element to fixed
+      cardEl.classList.add("dragging");
+      cardEl.style.position = "fixed";
+      cardEl.style.left = rect.left + "px";
+      cardEl.style.top = rect.top + "px";
+      cardEl.style.width = rect.width + "px";
+      cardEl.style.zIndex = "9999";
+      cardEl.style.pointerEvents = "none";
+
+      document.body.classList.add("drag-mode");
+    }
+
+    function moveDrag(clientX, clientY){
+      if(!drag.active || !drag.el) return;
+
+      // follow finger
+      drag.el.style.top = (clientY - drag.offsetY) + "px";
+
+      // autoscroll list
+      const listRect = listEl.getBoundingClientRect();
+      const edge = 60;
+      if(clientY < listRect.top + edge) listEl.scrollTop -= 12;
+      else if(clientY > listRect.bottom - edge) listEl.scrollTop += 12;
+
+      // find item under pointer (ignoring dragged)
+      const elUnder = document.elementFromPoint(clientX, clientY);
+      const targetItem = elUnder ? elUnder.closest(".item") : null;
+
+      if(!targetItem) return;
+      if(targetItem === drag.el) return;
+
+      const targetRect = targetItem.getBoundingClientRect();
+      const before = clientY < (targetRect.top + targetRect.height / 2);
+
+      const parent = listEl;
+      if(before){
+        parent.insertBefore(drag.placeholder, targetItem);
+      } else {
+        parent.insertBefore(drag.placeholder, targetItem.nextSibling);
+      }
+    }
+
+    function endDrag(){
+      if(!drag.active || !drag.el) return;
+
+      // put element where placeholder is
+      const parent = listEl;
+      parent.insertBefore(drag.el, drag.placeholder);
+
+      // cleanup styles
+      drag.el.classList.remove("dragging");
+      drag.el.style.position = "";
+      drag.el.style.left = "";
+      drag.el.style.top = "";
+      drag.el.style.width = "";
+      drag.el.style.zIndex = "";
+      drag.el.style.pointerEvents = "";
+
+      // remove placeholder
+      drag.placeholder.remove();
+
+      document.body.classList.remove("drag-mode");
+
+      // update products order based on DOM order (only for currently visible set? -> usamos orden global)
+      // El DOM contiene solo visibles, pero el usuario necesita orden global real.
+      // Solución: reconstruimos el orden global manteniendo los no-visibles en su sitio relativo, moviendo solo el id arrastrado.
+      const domIds = Array.from(listEl.querySelectorAll(".item")).map(x => x.dataset.id);
+
+      // Creamos orden global nuevo:
+      // 1) quitamos ids visibles del orden global
+      const visibleSet = new Set(domIds);
+      const rest = products.filter(p => !visibleSet.has(p.id));
+
+      // 2) añadimos visibles en el orden del DOM
+      const byId = new Map(products.map(p => [p.id, p]));
+      const newVisible = domIds.map(id => byId.get(id)).filter(Boolean);
+
+      // 3) el orden global final: visibles primero + resto al final
+      // (Esto es lo más coherente si usas drag dentro de un filtro/búsqueda: el orden “principal” sigue el que estás viendo.)
+      products = [...newVisible, ...rest];
+
+      save();
+      render(); // refresca referencias + focus
+
+      // reset drag state
+      drag.active = false;
+      drag.id = null;
+      drag.el = null;
+      drag.placeholder = null;
+    }
+
     function render(){
       const items = visibleProducts();
+      lastVisible = items;
+
       listEl.innerHTML = "";
 
       if(products.length === 0){
         emptyEl.style.display = "block";
         emptyEl.textContent = "No hay productos. Pulsa “Añadir”.";
+        updateCounters();
         return;
       }
 
@@ -556,11 +711,12 @@
 
       emptyEl.style.display = "none";
 
-      items.forEach(({p, idx}) => {
+      items.forEach(({p}) => {
         const isPending = !sessionTouched.has(p.id);
 
         const card = document.createElement("div");
         card.className = "item" + (isPending ? " pending" : "");
+        card.dataset.id = p.id;
 
         const row1 = document.createElement("div");
         row1.className = "row1";
@@ -607,12 +763,46 @@
         inA.inputMode = "numeric";
         inA.min = "0";
         inA.value = (p.stockActual ?? 0);
+
+        inA.addEventListener("focus", () => {
+          setTimeout(() => { try { inA.select(); } catch {} }, 0);
+        });
+
+        // Mientras escribe: permitir vacío y NO marcar revisado
         inA.addEventListener("input", () => {
-          p.stockActual = clampNum(inA.value);
+          p.stockActual = (inA.value === "") ? "" : clampNum(inA.value);
+          save();
+        });
+
+        // Al salir: normalizar y marcar revisado
+        inA.addEventListener("blur", () => {
+          if (p.stockActual === "" || p.stockActual == null) {
+            p.stockActual = 0;
+            inA.value = "0";
+          }
           sessionTouched.add(p.id);
           save();
           render();
         });
+
+        // Enter: guardar + saltar al siguiente Actual
+        inA.dataset.role = "actual";
+        inA.dataset.id = p.id;
+
+        inA.addEventListener("keydown", (e) => {
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+
+          const pos = lastVisible.findIndex(x => x.p.id === p.id);
+          if (pos >= 0 && pos < lastVisible.length - 1) {
+            pendingFocusId = lastVisible[pos + 1].p.id;
+          } else {
+            pendingFocusId = null;
+          }
+
+          inA.blur();
+        });
+
         numA.appendChild(inA);
 
         const numM = document.createElement("div");
@@ -643,13 +833,16 @@
         const badges = document.createElement("div");
         badges.className = "badges";
 
-        if(!p.stockMax || clampNum(p.stockMax) <= 0){
+        const actualForCalc = (p.stockActual === "" ? 0 : clampNum(p.stockActual));
+        const maxForCalc = clampNum(p.stockMax);
+
+        if(!p.stockMax || maxForCalc <= 0){
           const b = document.createElement("span");
           b.className = "badge b-nomax";
           b.textContent = "Sin máximo";
           badges.appendChild(b);
         } else if(needsBuy(p)){
-          const falta = Math.max(0, clampNum(p.stockMax) - clampNum(p.stockActual));
+          const falta = Math.max(0, maxForCalc - actualForCalc);
           const b = document.createElement("span");
           b.className = "badge b-buy";
           b.textContent = `Pedir: ${falta}`;
@@ -671,32 +864,33 @@
         const acts = document.createElement("div");
         acts.className = "mini-actions";
 
-        const up = document.createElement("button");
-        up.className = "icon";
-        up.textContent = "⬆️";
-        up.title = "Subir";
-        up.disabled = idx === 0;
-        up.addEventListener("click", () => {
-          const tmp = products[idx-1];
-          products[idx-1] = products[idx];
-          products[idx] = tmp;
-          save();
-          render();
+        // Handle drag
+        const handle = document.createElement("button");
+        handle.className = "handle";
+        handle.textContent = "☰";
+        handle.title = "Mantén y arrastra para reordenar";
+
+        handle.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handle.setPointerCapture(e.pointerId);
+
+          // inicia drag
+          startDrag(card, p.id, e.clientX, e.clientY);
+
+          const onMove = (ev) => moveDrag(ev.clientX, ev.clientY);
+          const onUp = (ev) => {
+            try { handle.releasePointerCapture(ev.pointerId); } catch {}
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);
+            endDrag();
+          };
+
+          window.addEventListener("pointermove", onMove, { passive: false });
+          window.addEventListener("pointerup", onUp, { passive: false });
         });
 
-        const down = document.createElement("button");
-        down.className = "icon";
-        down.textContent = "⬇️";
-        down.title = "Bajar";
-        down.disabled = idx === products.length - 1;
-        down.addEventListener("click", () => {
-          const tmp = products[idx+1];
-          products[idx+1] = products[idx];
-          products[idx] = tmp;
-          save();
-          render();
-        });
-
+        // Delete
         const del = document.createElement("button");
         del.className = "icon";
         del.textContent = "🗑";
@@ -708,8 +902,7 @@
           render();
         });
 
-        acts.appendChild(up);
-        acts.appendChild(down);
+        acts.appendChild(handle);
         acts.appendChild(del);
 
         status.appendChild(badges);
@@ -722,6 +915,21 @@
       });
 
       updateCounters();
+
+      // Enfocar siguiente "Actual" si venimos de Enter
+      if (pendingFocusId) {
+        const idToFocus = pendingFocusId;
+        pendingFocusId = null;
+
+        requestAnimationFrame(() => {
+          const next = document.querySelector(`[data-role="actual"][data-id="${idToFocus}"]`);
+          if (next) {
+            next.scrollIntoView({ block: "center", behavior: "smooth" });
+            next.focus({ preventScroll: true });
+            try { next.select(); } catch {}
+          }
+        });
+      }
     }
 
     function updateCounters(){
@@ -755,7 +963,7 @@
       products.forEach(p => {
         if(!p.nombre) return;
         const max = clampNum(p.stockMax);
-        const cur = clampNum(p.stockActual);
+        const cur = (p.stockActual === "" ? 0 : clampNum(p.stockActual));
         if(max <= 0) return;
         const falta = Math.max(0, max - cur);
         if(falta <= 0) return;
@@ -817,7 +1025,7 @@
           id: x.id || (crypto.randomUUID?.() ?? String(Date.now())+"-"+Math.random()),
           nombre: x.nombre || "",
           unidad: x.unidad || "",
-          stockActual: clampNum(x.stockActual ?? 0),
+          stockActual: (x.stockActual === "" ? "" : clampNum(x.stockActual ?? 0)),
           stockMax: clampNum(x.stockMax ?? 0),
         }));
         sessionTouched = new Set();
@@ -847,8 +1055,7 @@
       });
       save();
       render();
-      const list = document.getElementById("list");
-      list.scrollTo({top: list.scrollHeight, behavior:"smooth"});
+      listEl.scrollTo({top: listEl.scrollHeight, behavior:"smooth"});
     }
 
     function resetAll(){
