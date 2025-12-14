@@ -16,7 +16,7 @@
     .app{
       max-width: 860px;
       margin: 0 auto;
-      padding: 0.9rem 0.8rem 6.4rem; /* deja espacio para la barra inferior */
+      padding: 0.9rem 0.8rem 6.4rem; /* espacio para barra inferior */
     }
 
     header{
@@ -121,6 +121,7 @@
     .dot{
       width:8px;height:8px;border-radius:999px;
       background:#22c55e;
+      flex:0 0 auto;
     }
     .dot.warn{ background:#f97316; }
 
@@ -129,13 +130,14 @@
       height: 62vh;
       max-height: 62vh;
       overflow-y:auto;
+      overflow-x:hidden;
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
       touch-action: pan-y;
       display:flex;
       flex-direction:column;
       gap:0.6rem;
-      padding-right: 2px; /* para que no “corte” el scroll bar */
+      padding-right: 2px;
     }
 
     .empty{
@@ -161,14 +163,17 @@
       gap:0.6rem;
       justify-content:space-between;
       align-items:flex-start;
+      min-width: 0;
     }
 
     .name-wrap{
       flex:1;
-      min-width:0;
+      min-width:0; /* 🔥 evita colapsos raros */
     }
+
     .name{
       width:100%;
+      min-width: 100%;
       border:1px solid #e5e7eb;
       border-radius:14px;
       padding:0.5rem 0.65rem;
@@ -179,6 +184,11 @@
       resize:none;
       overflow:hidden; /* sin scroll interno */
       background:#fff;
+
+      /* 🔥 para que NUNCA quede letra-por-letra */
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
     .name:focus{ border-color:#111827; }
 
@@ -200,7 +210,7 @@
       gap:0.45rem;
       align-items:flex-end;
       flex-shrink:0;
-      min-width: 170px;
+      min-width: 190px;
     }
 
     .nums{
@@ -229,7 +239,7 @@
       border:0;
       outline:none;
       font-size:1rem;
-      font-weight:700;
+      font-weight:800;
       background:transparent;
       padding:0;
     }
@@ -247,6 +257,7 @@
       gap:0.35rem;
       flex-wrap:wrap;
       align-items:center;
+      min-width:0;
     }
 
     .badge{
@@ -256,7 +267,7 @@
       padding:0.15rem 0.55rem;
       border-radius:999px;
       font-size:0.74rem;
-      font-weight:600;
+      font-weight:700;
       white-space:nowrap;
     }
     .b-pending{ background:#fee2e2; color:#b91c1c; }
@@ -269,6 +280,7 @@
       gap:0.25rem;
       align-items:center;
       justify-content:flex-end;
+      flex:0 0 auto;
     }
     .icon{
       border-radius:12px;
@@ -287,6 +299,7 @@
       backdrop-filter: blur(10px);
       border-top: 1px solid #e5e7eb;
       padding: 0.6rem 0.7rem;
+      z-index: 40;
     }
     .bottom-inner{
       max-width:860px;
@@ -303,11 +316,12 @@
       gap:0.45rem;
       align-items:center;
       min-width:0;
+      flex-wrap:wrap;
     }
-    .bottom-left strong{ color:#111827; font-weight:800; }
+    .bottom-left strong{ color:#111827; font-weight:900; }
     .bottom-right{ display:flex; gap:0.45rem; }
 
-    /* Modal simple */
+    /* Modal */
     .modal-backdrop{
       position:fixed; inset:0;
       background: rgba(0,0,0,0.35);
@@ -315,7 +329,7 @@
       align-items:flex-end;
       justify-content:center;
       padding: 0.8rem;
-      z-index: 50;
+      z-index: 60;
     }
     .modal{
       width: min(860px, 100%);
@@ -325,16 +339,8 @@
       box-shadow: 0 12px 40px rgba(0,0,0,0.18);
       padding:0.8rem;
     }
-    .modal h2{
-      margin:0;
-      font-size:1rem;
-      font-weight:800;
-    }
-    .modal p{
-      margin:0.35rem 0 0.65rem;
-      font-size:0.85rem;
-      color:#6b7280;
-    }
+    .modal h2{ margin:0; font-size:1rem; font-weight:900; }
+    .modal p{ margin:0.35rem 0 0.65rem; font-size:0.85rem; color:#6b7280; }
     .modal textarea{
       width:100%;
       min-height: 180px;
@@ -354,12 +360,35 @@
       flex-wrap:wrap;
     }
 
+    /* ✅ FIX MÓVIL: layout vertical para evitar “nombre en columna” */
+    @media (max-width: 640px){
+      .app{ padding: 0.9rem 0.7rem 6.4rem; }
+      header{ align-items:flex-start; }
+      .sub{ display:none; }
+
+      .row1{
+        flex-direction: column;     /* 🔥 CLAVE */
+        align-items: stretch;
+      }
+      .right{
+        width: 100%;
+        min-width: 0;               /* 🔥 CLAVE */
+        align-items: stretch;
+      }
+      .nums{
+        grid-template-columns: 1fr 1fr;
+      }
+      .statusline{
+        flex-direction: row;
+      }
+    }
+
     @media (min-width: 720px){
       h1{ font-size:1.45rem; }
       .controls{ grid-template-columns: 1fr auto; align-items:center; }
       .filters{ justify-content:flex-start; }
       .summary{ justify-content:flex-end; }
-      .right{ min-width: 220px; }
+      .right{ min-width: 240px; }
       .list{ height: 58vh; max-height: 58vh; }
     }
   </style>
@@ -429,17 +458,15 @@
         <span><strong id="buyCount">0</strong> para pedir</span>
       </div>
       <div class="bottom-right">
-        <button class="btn-secondary" id="btn-newSession" title="Vuelve a marcar todo como pendiente">🔁</button>
+        <button class="btn-secondary" id="btn-newSession" title="Marcar todo como pendiente">🔁</button>
         <button class="btn-primary" id="btn-generate">🧮 Pedido</button>
       </div>
     </div>
   </div>
 
   <script>
-    // ====== Config ======
-    const STORAGE_KEY = "esencia-pedido-mobile-v1";
+    const STORAGE_KEY = "esencia-pedido-mobile-v2";
 
-    // Datos iniciales (solo ejemplo)
     const DEFAULT_PRODUCTS = [
       { id: crypto.randomUUID?.() ?? String(Date.now())+"-1", nombre: "Sirope Monin Pistacho", unidad: "botella", stockActual: 0, stockMax: 1 },
       { id: crypto.randomUUID?.() ?? String(Date.now())+"-2", nombre: "Sirope Monin Vainilla", unidad: "botella", stockActual: 1, stockMax: 1 },
@@ -447,11 +474,10 @@
     ];
 
     let products = [];
-    let sessionTouched = new Set(); // al abrir: todo pendiente
+    let sessionTouched = new Set();
     let currentFilter = "all";
     let searchQuery = "";
 
-    // ====== Helpers ======
     function load(){
       try{
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -465,7 +491,7 @@
       }catch{
         products = DEFAULT_PRODUCTS;
       }
-      sessionTouched = new Set();
+      sessionTouched = new Set(); // al abrir: todo pendiente
     }
 
     function save(){
@@ -496,7 +522,10 @@
       return products
         .map((p, idx) => ({p, idx}))
         .filter(({p}) => {
-          const inSearch = !q || (p.nombre || "").toLowerCase().includes(q) || (p.unidad || "").toLowerCase().includes(q);
+          const inSearch = !q
+            || (p.nombre || "").toLowerCase().includes(q)
+            || (p.unidad || "").toLowerCase().includes(q);
+
           if(!inSearch) return false;
 
           if(currentFilter === "pending") return !sessionTouched.has(p.id);
@@ -505,7 +534,6 @@
         });
     }
 
-    // ====== UI ======
     const listEl = document.getElementById("list");
     const emptyEl = document.getElementById("empty");
 
@@ -515,15 +543,18 @@
 
       if(products.length === 0){
         emptyEl.style.display = "block";
-        return;
-      }
-      emptyEl.style.display = items.length === 0 ? "block" : "none";
-      if(items.length === 0){
-        emptyEl.textContent = "No hay coincidencias con tu búsqueda/filtro.";
-        return;
-      } else {
         emptyEl.textContent = "No hay productos. Pulsa “Añadir”.";
+        return;
       }
+
+      if(items.length === 0){
+        emptyEl.style.display = "block";
+        emptyEl.textContent = "No hay coincidencias con tu búsqueda/filtro.";
+        updateCounters();
+        return;
+      }
+
+      emptyEl.style.display = "none";
 
       items.forEach(({p, idx}) => {
         const isPending = !sessionTouched.has(p.id);
@@ -531,7 +562,6 @@
         const card = document.createElement("div");
         card.className = "item" + (isPending ? " pending" : "");
 
-        // Row 1
         const row1 = document.createElement("div");
         row1.className = "row1";
 
@@ -581,7 +611,7 @@
           p.stockActual = clampNum(inA.value);
           sessionTouched.add(p.id);
           save();
-          render(); // para refrescar badges y estado pending
+          render();
         });
         numA.appendChild(inA);
 
@@ -607,7 +637,6 @@
         row1.appendChild(nameWrap);
         row1.appendChild(right);
 
-        // Status line
         const status = document.createElement("div");
         status.className = "statusline";
 
@@ -673,7 +702,7 @@
         del.textContent = "🗑";
         del.title = "Eliminar";
         del.addEventListener("click", () => {
-          if(!confirm(`Eliminar "${p.nombre || "producto"}"?`)) return;
+          if(!confirm(`Eliminar "${(p.nombre || "producto").trim()}"?`)) return;
           products = products.filter(x => x.id !== p.id);
           save();
           render();
@@ -701,7 +730,6 @@
       const revisados = total - pendientes;
       const buy = products.filter(p => needsBuy(p)).length;
 
-      // summary top right
       const summary = document.getElementById("summary");
       summary.innerHTML = `
         <span class="dot ${pendientes>0 ? "warn":""}"></span>
@@ -710,15 +738,15 @@
         <span><strong>${total}</strong> productos</span>
       `;
 
-      // bottom bar
       document.getElementById("revCount").textContent = String(revisados);
       document.getElementById("totalCount").textContent = String(total);
       document.getElementById("buyCount").textContent = String(buy);
+
       const dot = document.querySelector("#bottomInfo .dot");
       if (pendientes>0) dot.classList.add("warn"); else dot.classList.remove("warn");
     }
 
-    // ====== Pedido ======
+    // ===== Pedido (modal) =====
     const modalBackdrop = document.getElementById("modalBackdrop");
     const pedidoText = document.getElementById("pedidoText");
 
@@ -768,7 +796,7 @@
       }
     }
 
-    // ====== Export/Import ======
+    // ===== Export/Import =====
     async function exportConfig(){
       const data = JSON.stringify(products, null, 2);
       try{
@@ -801,14 +829,14 @@
       }
     }
 
-    // ====== Session reset ======
+    // ===== Session =====
     function newSession(){
       sessionTouched = new Set();
       updateCounters();
       render();
     }
 
-    // ====== Add / Reset ======
+    // ===== Add/Reset =====
     function addProduct(){
       products.push({
         id: crypto.randomUUID?.() ?? String(Date.now()) + "-" + Math.random(),
@@ -819,7 +847,6 @@
       });
       save();
       render();
-      // lleva el scroll arriba para ver el nuevo (al final, pero no te rompe)
       const list = document.getElementById("list");
       list.scrollTo({top: list.scrollHeight, behavior:"smooth"});
     }
@@ -832,7 +859,7 @@
       render();
     }
 
-    // ====== Filters / Search ======
+    // ===== Filters/Search =====
     function setFilter(f){
       currentFilter = f;
       document.querySelectorAll(".chip").forEach(c => {
@@ -841,7 +868,7 @@
       render();
     }
 
-    // ====== Init ======
+    // ===== Init =====
     document.addEventListener("DOMContentLoaded", () => {
       load();
       render();
